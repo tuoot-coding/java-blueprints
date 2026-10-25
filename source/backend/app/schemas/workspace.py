@@ -72,6 +72,11 @@ class BehaviorTestCaseSchema(BaseModel):
     expected_stdout: str
     expected_exit_code: int
     main_class_hint: str | None = None
+    purpose: str = "workability"
+    related_issue_id: str | None = None
+    expects_original_failure: bool = False
+    description: str = ""
+    error_description: str = ""
 
 
 class BehaviorTestRunSchema(BaseModel):
@@ -89,6 +94,25 @@ class BehaviorTestRunSchema(BaseModel):
     matched_expected_original: bool
     matched_expected_generated: bool
     detail: str
+    purpose: str = "workability"
+    related_issue_id: str | None = None
+    expects_original_failure: bool = False
+    description: str = ""
+    error_description: str = ""
+    original_stderr: str = ""
+    generated_stderr: str = ""
+    original_wall_ms: int | None = None
+    original_cpu_user_ms: int | None = None
+    original_cpu_sys_ms: int | None = None
+    original_max_rss_kb: int | None = None
+    generated_wall_ms: int | None = None
+    generated_cpu_user_ms: int | None = None
+    generated_cpu_sys_ms: int | None = None
+    generated_max_rss_kb: int | None = None
+    wall_ratio: float | None = None
+    cpu_ratio: float | None = None
+    rss_ratio: float | None = None
+    resources_vs_baseline: str = "n/a"
 
 
 class BehaviorCompareSchema(BaseModel):
@@ -546,6 +570,11 @@ def behavior_compare_schema(result: object | None) -> BehaviorCompareSchema | No
                 expected_stdout=item.expected_stdout,
                 expected_exit_code=item.expected_exit_code,
                 main_class_hint=item.main_class_hint,
+                purpose=item.purpose,
+                related_issue_id=item.related_issue_id,
+                expects_original_failure=item.expects_original_failure,
+                description=item.description,
+                error_description=item.error_description,
             )
             for item in result.tests
         ],
@@ -563,6 +592,25 @@ def behavior_compare_schema(result: object | None) -> BehaviorCompareSchema | No
                 matched_expected_original=item.matched_expected_original,
                 matched_expected_generated=item.matched_expected_generated,
                 detail=item.detail,
+                purpose=item.purpose,
+                related_issue_id=item.related_issue_id,
+                expects_original_failure=item.expects_original_failure,
+                description=item.description,
+                error_description=item.error_description,
+                original_stderr=item.original_stderr,
+                generated_stderr=item.generated_stderr,
+                original_wall_ms=item.original_wall_ms,
+                original_cpu_user_ms=item.original_cpu_user_ms,
+                original_cpu_sys_ms=item.original_cpu_sys_ms,
+                original_max_rss_kb=item.original_max_rss_kb,
+                generated_wall_ms=item.generated_wall_ms,
+                generated_cpu_user_ms=item.generated_cpu_user_ms,
+                generated_cpu_sys_ms=item.generated_cpu_sys_ms,
+                generated_max_rss_kb=item.generated_max_rss_kb,
+                wall_ratio=item.wall_ratio,
+                cpu_ratio=item.cpu_ratio,
+                rss_ratio=item.rss_ratio,
+                resources_vs_baseline=item.resources_vs_baseline,
             )
             for item in result.runs
         ],

@@ -224,11 +224,12 @@ def repair_workspace_request(
     inspection = inspect_java_source(repaired)
     generated_ir = build_structural_ir(repaired, inspection.tree)
     generated_scratch = build_scratch_program(generated_ir)
-    # 10 тестов по оригиналу, затем сравнение обеих версий.
+    # Тесты ПОСЛЕ ревью: сценарии с учётом выбранных issues исходника.
     test_compare = compare_versions_with_tests(
         original=loaded.source,
         generated=repaired,
         options=call_options,
+        known_issues=issues,
     )
     code_compare = test_compare.code_metrics
     new_hash = source_fingerprint(repaired)

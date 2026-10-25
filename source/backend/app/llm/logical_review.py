@@ -11,7 +11,13 @@ from app.core.logging import log_activity
 from app.llm.call_options import LlmCallOptions
 from app.llm.client import LlmClientError, chat_completion
 from app.llm.json_extract import parse_json_object
-from app.llm.prompts import build_logical_review_messages, review_chat_payload
+from app.llm.prompts import (
+    build_logical_review_messages,
+    build_review_verify_messages,
+    format_issues_for_repair,
+    llm_chat_payload,
+    review_chat_payload,
+)
 from app.llm.response_normalize import normalize_review_payload
 from app.llm.source_pack import LlmSourcePack
 from app.parser.positions import LineIndex
@@ -22,6 +28,23 @@ _JSON_RETRY_USER = (
     "Предыдущий ответ не был валидным JSON-объектом. "
     "Верни ТОЛЬКО один JSON-объект вида "
     '{"issues":[...],"notes":[...]} без markdown и без текста вокруг.'
+)
+
+# Пояснение явно снимает статус ошибки - локальный фильтр до/после verify.
+_FALSE_POSITIVE_MARKERS = (
+    "не является ошибкой",
+    "не ошибка",
+    "не баг",
+    "не является багом",
+    "ложное срабатывание",
+    "ложная ошибка",
+    "false positive",
+    "not a bug",
+    "not an error",
+    "это не ошибка",
+    "ошибкой не является",
+    "допустимое поведение",
+    "не дефект",
 )
 
 
@@ -110,24 +133,38 @@ def review_java_logic(
             timeout_seconds=options.timeout_seconds,
             verify_ssl=options.verify_ssl,
         )
-        data = _parse_review_content(content, options=options, messages=messages, max_tokens=max_tokens)
+        data = _parse_review_content(
+            content, options=options, messages=messages, max_tokens=max_tokens
+        )
         normalized = normalize_review_payload(data)
         issues = tuple(
             _parse_issue(item, index, line_index, source)
             for index, item in enumerate(normalized["issues"])
             if isinstance(item, dict)
         )
-        notes = tuple(normalized["notes"])
+        notes = list(normalized["notes"])
+        before_local = len(issues)
+        issues, dropped_local = _drop_false_positives_local(issues)
+        if dropped_local:
+            notes.append(f"false_positive_local_dropped={dropped_local}")
+        if issues:
+            issues, verify_notes = _verify_issues_with_llm(
+                issues=issues,
+                source_pack=source_pack,
+                options=options,
+            )
+            notes.extend(verify_notes)
         log_activity(
             "llm_logical_review_ok",
             model=model,
             issue_count=len(issues),
+            before_filter=before_local,
             fixable_count=sum(1 for item in issues if item.fix is not None),
         )
         return LogicalReviewResult(
             status="ok",
             issues=issues,
-            notes=notes,
+            notes=tuple(notes),
             model=model,
         )
     except LlmClientError as exc:
@@ -200,7 +237,7 @@ def _parse_issue(
     source: str,
 ) -> LlmLogicalIssue:
     severity = str(item.get("severity", "warning"))
-    if severity not in {"error", "warning", "info", "hint"}:
+    if severity not in {"error", "warning", "info", "hint", "structure"}:
         severity = "warning"
     confidence = str(item.get("confidence", "medium"))
     if confidence not in {"high", "medium"}:
@@ -217,14 +254,18 @@ def _parse_issue(
     affects_raw = item.get("affects_execution")
     if isinstance(affects_raw, bool):
         affects_execution = affects_raw
-    elif severity in {"info", "hint"}:
-        affects_execution = False
-    elif code.startswith(("llm.structure.", "llm.bloat.", "llm.complexity.")):
+    elif severity in {"info", "hint", "structure"} or code.startswith(
+        ("llm.structure.", "llm.bloat.", "llm.complexity.")
+    ):
         affects_execution = False
     else:
         affects_execution = True
     if not affects_execution and severity in {"error", "warning"}:
-        severity = "info"
+        severity = (
+            "structure"
+            if code.startswith(("llm.structure.", "llm.bloat."))
+            else "info"
+        )
     issue_id = str(item.get("id") or f"issue_{index + 1}")
     fix_raw = item.get("fix")
     fix = None
@@ -247,6 +288,119 @@ def _parse_issue(
         fix=fix,
         affects_execution=affects_execution,
     )
+
+
+def _drop_false_positives_local(
+    issues: tuple[LlmLogicalIssue, ...],
+) -> tuple[tuple[LlmLogicalIssue, ...], int]:
+    """Убирает issues, чьё пояснение само отрицает наличие ошибки."""
+    kept: list[LlmLogicalIssue] = []
+    dropped = 0
+    for issue in issues:
+        blob = f"{issue.explanation} {issue.message} {issue.title}".lower()
+        if any(marker in blob for marker in _FALSE_POSITIVE_MARKERS):
+            dropped += 1
+            continue
+        kept.append(issue)
+    return tuple(kept), dropped
+
+
+def _verify_issues_with_llm(
+    *,
+    issues: tuple[LlmLogicalIssue, ...],
+    source_pack: LlmSourcePack,
+    options: LlmCallOptions,
+) -> tuple[tuple[LlmLogicalIssue, ...], list[str]]:
+    """Повторный проход: LLM отмечает ложные id, их не отдаём пользователю."""
+    if not issues:
+        return issues, []
+    issues_payload = format_issues_for_repair(
+        [
+            {
+                "id": issue.id,
+                "severity": issue.severity,
+                "code": issue.code,
+                "title": issue.title,
+                "message": issue.message,
+                "explanation": issue.explanation,
+                "start_line": issue.start_line,
+                "end_line": issue.end_line,
+            }
+            for issue in issues
+        ]
+    )
+    # Добавим explanation в компактный вид - format_issues не включает explanation.
+    enriched_lines = [
+        f"{line} | expl={(issue.explanation or '')[:180]}"
+        for line, issue in zip(issues_payload.splitlines(), issues, strict=False)
+    ]
+    messages = build_review_verify_messages(
+        source_payload=source_pack.payload_text,
+        issues_payload="\n".join(enriched_lines) if enriched_lines else issues_payload,
+    )
+    payload = llm_chat_payload(
+        model=options.model,
+        messages=messages,
+        schema={
+            "type": "object",
+            "properties": {
+                "keep_ids": {"type": "array", "items": {"type": "string"}},
+                "drop_ids": {"type": "array", "items": {"type": "string"}},
+                "notes": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["keep_ids", "drop_ids", "notes"],
+        },
+        temperature=0.0,
+        max_tokens=2048,
+        provider=options.credentials.provider,
+    )
+    log_activity("llm_logical_review_verify_start", issue_count=len(issues))
+    try:
+        content = chat_completion(
+            credentials=options.credentials,
+            base_url=options.base_url,
+            oauth_url=options.oauth_url,
+            payload=payload,
+            timeout_seconds=min(90.0, options.timeout_seconds),
+            verify_ssl=options.verify_ssl,
+        )
+        data = parse_json_object(content)
+    except (LlmClientError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        log_activity("llm_logical_review_verify_skipped", reason=type(exc).__name__)
+        return issues, [f"verify_skipped:{type(exc).__name__}"]
+
+    drop_raw = data.get("drop_ids") if isinstance(data, dict) else None
+    keep_raw = data.get("keep_ids") if isinstance(data, dict) else None
+    drop_ids = {
+        str(item).strip()
+        for item in (drop_raw if isinstance(drop_raw, list) else [])
+        if str(item).strip()
+    }
+    keep_ids = {
+        str(item).strip()
+        for item in (keep_raw if isinstance(keep_raw, list) else [])
+        if str(item).strip()
+    }
+    # Если модель вернула keep - уважаем его; иначе вычитаем только drop.
+    if keep_ids:
+        kept = tuple(issue for issue in issues if issue.id in keep_ids and issue.id not in drop_ids)
+    else:
+        kept = tuple(issue for issue in issues if issue.id not in drop_ids)
+    # Повторный локальный фильтр на случай, если verify оставил сомнительные.
+    kept, extra_local = _drop_false_positives_local(kept)
+    dropped = len(issues) - len(kept)
+    notes = [f"false_positive_verify_dropped={dropped}"]
+    if extra_local:
+        notes.append(f"false_positive_verify_local_extra={extra_local}")
+    verify_notes_raw = data.get("notes") if isinstance(data, dict) else None
+    if isinstance(verify_notes_raw, list):
+        notes.extend(str(item) for item in verify_notes_raw[:5])
+    log_activity(
+        "llm_logical_review_verify_ok",
+        kept=len(kept),
+        dropped=dropped,
+    )
+    return kept, notes
 
 
 def _parse_fix(

@@ -14,7 +14,7 @@ import {
   type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 
 import { schemeEdgeTypes } from "@/components/graph/schemeEdges";
 import { scratchNodeTypes, type ScratchNodeData } from "@/components/graph/scratchNodes";
@@ -125,7 +125,7 @@ function GraphCanvas({
   onScratchChange,
   onCreateBlankScheme,
 }: GraphWorkspaceProps) {
-  const { fitView } = useReactFlow();
+  const { fitView, screenToFlowPosition } = useReactFlow();
   const structureKey = useMemo(
     () => (scratch ? `${schemeStructureKey(scratch)}|edit:${editMode}` : ""),
     [scratch, editMode],
@@ -156,6 +156,8 @@ function GraphCanvas({
   const [editorHidden, setEditorHidden] = useState(true);
   /** Ручные размеры блоков (не сбрасываются при клике, переживают relayout). */
   const sizeOverridesRef = useRef<Record<string, { width: number; height: number }>>({});
+  /** Позиции после drop с палитры (свободная вставка без автосвязей). */
+  const positionOverridesRef = useRef<Record<string, { x: number; y: number }>>({});
   const lastFitKey = useRef<string>("");
 
   function applySizeOverrides(list: Node[]): Node[] {
@@ -177,10 +179,24 @@ function GraphCanvas({
     });
   }
 
+  function applyPositionOverrides(list: Node[]): Node[] {
+    const overrides = positionOverridesRef.current;
+    if (Object.keys(overrides).length === 0) {
+      return list;
+    }
+    return list.map((node) => {
+      const position = overrides[node.id];
+      if (!position) {
+        return node;
+      }
+      return { ...node, position: { x: position.x, y: position.y } };
+    });
+  }
+
   // Пересборка только при изменении структуры, не при клике/выделении.
   useEffect(() => {
     const next = applySelection(
-      applySizeOverrides(laidOut.nodes),
+      applyPositionOverrides(applySizeOverrides(laidOut.nodes)),
       laidOut.edges,
       selectedBlockId,
       selectedEdgeId,
@@ -251,8 +267,15 @@ function GraphCanvas({
           height: change.dimensions.height,
         };
       }
+      if (change.type === "position" && change.position && change.dragging === false) {
+        positionOverridesRef.current[change.id] = {
+          x: change.position.x,
+          y: change.position.y,
+        };
+      }
       if (change.type === "remove") {
         delete sizeOverridesRef.current[change.id];
+        delete positionOverridesRef.current[change.id];
       }
     }
     // Позиции/выделение на холсте не должны пересобирать программу.
@@ -391,16 +414,29 @@ function GraphCanvas({
     setSelectedEdgeId(null);
   }
 
-  function addBlock(kind: InsertableBlockKind, mode: InsertMode = "free") {
+  function addBlock(
+    kind: InsertableBlockKind,
+    mode: InsertMode = "free",
+    dropPosition?: { x: number; y: number },
+  ) {
     if (!scratch || !onScratchChange) {
       return;
     }
     const selected = selectedBlockId
       ? scratch.blocks.find((block) => block.id === selectedBlockId)
       : null;
-    // По умолчанию - свободный шаблон, не зависит от выделения.
+    // По умолчанию - свободный шаблон, не зависит от выделения и без автосвязей.
     if (mode === "free") {
-      onScratchChange(insertBlock(scratch, kind, { free: true }));
+      const next = insertBlock(scratch, kind, { free: true });
+      if (dropPosition) {
+        const added = next.blocks.find(
+          (block) => !scratch.blocks.some((existing) => existing.id === block.id),
+        );
+        if (added) {
+          positionOverridesRef.current[added.id] = dropPosition;
+        }
+      }
+      onScratchChange(next);
       return;
     }
     if (mode === "body") {
@@ -435,12 +471,42 @@ function GraphCanvas({
     onScratchChange(insertBlock(scratch, kind, { free: true }));
   }
 
+  function onPaletteDragStart(event: DragEvent, kind: InsertableBlockKind) {
+    event.dataTransfer.setData("application/jb-block-kind", kind);
+    event.dataTransfer.effectAllowed = "copy";
+  }
+
+  function onCanvasDragOver(event: DragEvent) {
+    if (!editMode || !event.dataTransfer.types.includes("application/jb-block-kind")) {
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  }
+
+  function onCanvasDrop(event: DragEvent) {
+    if (!editMode || !scratch || !onScratchChange) {
+      return;
+    }
+    const kind = event.dataTransfer.getData("application/jb-block-kind") as InsertableBlockKind;
+    if (!kind || !BLOCK_PALETTE.some((item) => item.kind === kind)) {
+      return;
+    }
+    event.preventDefault();
+    const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+    addBlock(kind, "free", position);
+  }
+
   const canDeleteSelected = Boolean(
     editMode && selectedBlockId && scratch && canDeleteBlock(scratch, selectedBlockId),
   );
 
   return (
-    <div className="relative h-full min-h-0 w-full">
+    <div
+      className="relative h-full min-h-0 w-full"
+      onDragOver={editMode ? onCanvasDragOver : undefined}
+      onDrop={editMode ? onCanvasDrop : undefined}
+    >
       <ReactFlow
         nodes={nodes.map((node) => ({
           ...node,
@@ -584,7 +650,7 @@ function GraphCanvas({
                     {uiText.graphPaletteTitle}
                   </div>
                   <p className="shrink-0 px-2 py-1 text-[9px] leading-snug text-slate-500">
-                    {uiText.graphPaletteFreeHint}
+                    {uiText.graphPaletteDragHint}
                   </p>
                   <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-1.5">
                     <div className="flex flex-col gap-0.5">
@@ -592,9 +658,11 @@ function GraphCanvas({
                         <div key={item.kind} className="flex gap-0.5">
                           <button
                             type="button"
+                            draggable
                             title={`${item.title}: ${uiText.graphInsertFree}`}
-                            className="min-w-0 flex-1 truncate rounded border border-slate-700 px-1.5 py-0.5 text-left text-[10px] text-slate-100 hover:bg-slate-800"
+                            className="min-w-0 flex-1 cursor-grab truncate rounded border border-slate-700 px-1.5 py-0.5 text-left text-[10px] text-slate-100 hover:bg-slate-800 active:cursor-grabbing"
                             style={{ borderLeftColor: item.color, borderLeftWidth: 3 }}
+                            onDragStart={(event) => onPaletteDragStart(event, item.kind)}
                             onClick={() => addBlock(item.kind, "free")}
                           >
                             {item.title}

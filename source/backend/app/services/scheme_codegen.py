@@ -129,11 +129,12 @@ def generate_from_scheme_request(
     generated_ir = build_structural_ir(generated, inspection.tree)
     generated_scratch = build_scratch_program(generated_ir)
 
-    # До замены: 10 тестов по оригиналу и сравнение двух версий.
+    # Схема без списка issues ревью: только workability-сценарии по исходнику.
     test_compare = compare_versions_with_tests(
         original=loaded.source,
         generated=generated,
         options=options,
+        known_issues=[],
     )
     code_compare = test_compare.code_metrics
     new_hash = source_fingerprint(generated)

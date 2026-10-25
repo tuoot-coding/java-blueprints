@@ -55,23 +55,36 @@ fix: null ИЛИ объект
    дублирование кода, лишняя вложенность, монолит, «метод превышает порог
    строк/операторов». Это структурные замечания, не логические ошибки.
 
-Правила отбора:
-- Не стиль и не именование. Не выдумывай API.
+АНТИ-ГАЛЛЮЦИНАЦИИ (обязательно):
+- Не выдумывай баги «на всякий случай». Нет прямого доказательства в коде - не пиши issue.
+- Если серьёзных error нет - issues для error должны быть ПУСТЫМИ (не добавляй фиктивные).
+- Если неуверен - либо warning с evidence в explanation, либо вообще не включай.
+- Не заполняй issues ради «полноты списка». Допустимо и желательно: "issues": [].
+- Не стиль и не именование. Не выдумывай API и несуществующие методы.
 - Не меть structure как error/warning и наоборот.
 - Big O без логического бага, но критичная для задачи - error + llm.complexity.*.
-- fix только для безопасного локального патча.
-- Лучше полный список issues, чем усеченный.
+- fix только для безопасного локального патча при реальной ошибке.
 """
 
-TEST_SCRIPTS_SYSTEM = """Ты генерируешь поведенческие тесты для Java Blueprints.
-Нужны сценарии stdin/stdout для запуска `javac` + `java MainClass` (НЕ JUnit).
+TEST_SCRIPTS_SYSTEM = """Ты генерируешь console-сценарии для проверки РАБОТЫ Java-кода.
+Среда: javac + java MainClass, stdin/stdout. НЕ JUnit, НЕ assert, НЕ файлы/сеть.
+Метрики wall/cpu/rss измеряет раннер - НЕ выдумывай числа в JSON.
 
-Верни РОВНО один JSON-объект, без markdown, без пояснений до/после:
+На вход даны SOURCE и KNOWN_ISSUES (результаты ревью исходника; может быть []).
+Сценарии строятся ПОСЛЕ ревью. Затем их ЗАПУСТЯТ на исходнике: ресурсы
+original станут baseline для сравнения с отредактированным кодом.
+
+Верни РОВНО один JSON-объект, без markdown, без текста до/после:
 {
   "tests": [
     {
       "id": "t01",
       "name": "short_name",
+      "description": "что проверяет сценарий (1-2 предложения)",
+      "error_description": "подробно про ошибку/риск или пустая строка",
+      "purpose": "workability"|"exploit_error",
+      "related_issue_id": null,
+      "expects_original_failure": false,
       "stdin": "",
       "expected_stdout": "",
       "expected_exit_code": 0,
@@ -82,18 +95,24 @@ TEST_SCRIPTS_SYSTEM = """Ты генерируешь поведенческие 
 }
 
 Жёсткие правила:
-1) Ровно 10 элементов tests: id t01..t10.
-2) main_class_hint - имя класса с public static void main из исходника
-   (если main нет - класс, который реально компилируется как entry; иначе "Main").
-3) Тесты = подача stdin в main. Никаких assert/JUnit/@Test/org.junit.
-4) stdin и expected_stdout - короткие строки (до 200 символов), только то, что
-   программа читает/печатает. Экранируй JSON-кавычки и переводы строк как \\n.
-5) Если программа без Scanner/args - stdin="" и ожидаемый stdout по коду
-   (или "" если печатать нечего), expected_exit_code=0.
-6) Не придумывай входы для несуществующих полей/файлов/сети.
-7) Покрывай: 3 типичных, 3 граничных, 2 пустых/минимальных, 2 ошибочных
-   (ошибочные - только если код сам завершается ненулевым кодом; иначе exit 0).
-8) notes - короткий массив строк или []. Никакого текста вне JSON.
+1) Ровно 10 tests, id t01..t10. Каждый - сквозной прогон main на stdin.
+2) ГЛАВНОЕ: workability ОБЯЗАНЫ завершаться на SOURCE (exit 0, без Exception
+   и без ожидания лишнего ввода). Дай ВСЕ значения, которые Scanner/read
+   читает в main, иначе программа зависнет. Мысленно прогони ДО записи в JSON.
+3) main_class_hint = класс с public static void main из SOURCE (иначе
+   публичный класс; если неясно - "Main").
+4) stdin - только то, что SOURCE реально читает (Scanner/BufferedReader).
+   Формат и число значений - строго как в коде. Не придумывай меню/файлы/HTTP.
+5) description - понятное описание проверки. error_description:
+   - для workability: "" или краткий риск, если граничный ввод;
+   - для exploit_error: ПОДРОБНО какая ошибка из KNOWN_ISSUES, как stdin
+     её провоцирует, какой провал ожидается у исходника (NPE/неверный
+     ответ/зависание и т.п.).
+6) purpose="workability" (большинство): expected_stdout/exit - факт SOURCE.
+7) Если в KNOWN_ISSUES есть severity="error": минимум 1 exploit_error
+   (expects_original_failure=true, related_issue_id=id). Stdin целенаправленно
+   ломает исходник. Без error - НЕ делай фиктивный exploit.
+8) Не галлюцинируй баги и входы. Короткие строки (<=200). Только JSON.
 """
 
 REPAIR_SYSTEM = """Ты senior Java engineer для Java Blueprints (DeepSeek).
@@ -206,6 +225,11 @@ _TEST_SCRIPTS_SCHEMA: dict[str, Any] = {
                 "properties": {
                     "id": {"type": "string"},
                     "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "error_description": {"type": "string"},
+                    "purpose": {"type": "string"},
+                    "related_issue_id": {"type": ["string", "null"]},
+                    "expects_original_failure": {"type": "boolean"},
                     "stdin": {"type": "string"},
                     "expected_stdout": {"type": "string"},
                     "expected_exit_code": {"type": "integer"},
@@ -332,6 +356,40 @@ def build_logical_review_messages(
     ]
 
 
+REVIEW_VERIFY_SYSTEM = """Ты проверяешь список issues от предыдущего Java-review.
+Задача: отсеять ЛОЖНЫЕ срабатывания. Не добавляй новых issues.
+
+Верни РОВНО один JSON-объект:
+{"keep_ids":["id",...],"drop_ids":["id",...],"notes":["string"]}
+
+Правила drop (ложная ошибка):
+- В explanation/message прямо сказано, что это НЕ ошибка / не баг /
+  допустимо / ложное срабатывание / false positive / «не является ошибкой».
+- Нет доказательств бага в коде; issue галлюцинация или стиль.
+- severity=structure без реального дефекта исполнения - можно оставить
+  в keep, если замечание структурное честное.
+
+keep_ids - реальные проблемы. drop_ids - не показывать пользователю.
+Каждый входной id ровно в одном из списков. Только JSON.
+"""
+
+
+def build_review_verify_messages(
+    *,
+    source_payload: str,
+    issues_payload: str,
+) -> list[dict[str, str]]:
+    user = (
+        "Повторный анализ issues. Убери ложные (если пояснение говорит, "
+        "что это не ошибка, или нет доказательства бага).\n\n"
+        f"ISSUES:\n{issues_payload}\n\nSOURCE_CONTEXT:\n{source_payload[:24000]}"
+    )
+    return [
+        {"role": "system", "content": REVIEW_VERIFY_SYSTEM},
+        {"role": "user", "content": user},
+    ]
+
+
 def build_repair_messages(
     *,
     source_payload: str,
@@ -344,7 +402,8 @@ def build_repair_messages(
     if prefer_replacements or truncated:
         format_hint = (
             "Крупный файл: верни replacements по затронутым методам "
-            "(start_line/end_line inclusive, replacement = полный новый текст фрагмента). java=null."
+            "(start_line/end_line inclusive, replacement = полный новый "
+            "текст фрагмента). java=null."
         )
     else:
         format_hint = "Верни полный файл в java; replacements=[]."
@@ -389,16 +448,58 @@ def build_scheme_to_code_messages(
     ]
 
 
-def build_test_scripts_messages(*, source: str) -> list[dict[str, str]]:
+def build_test_scripts_messages(
+    *,
+    source: str,
+    known_issues: list[dict[str, Any]] | None = None,
+) -> list[dict[str, str]]:
+    issues_text = format_issues_for_test_scripts(known_issues or [])
+    serious = sum(
+        1
+        for item in (known_issues or [])
+        if str(item.get("severity", "")).lower() == "error"
+    )
+    exploit_hint = (
+        f"В KNOWN_ISSUES есть {serious} severity=error: "
+        "обязателен минимум 1 purpose=exploit_error."
+        if serious
+        else "Серьёзных error нет: только purpose=workability, без фиктивных exploit."
+    )
     user = (
-        "Сгенерируй ровно 10 console-тестов (stdin -> stdout, java main). "
-        "Ответ - только JSON по схеме. Без markdown и без JUnit.\n\nSOURCE:\n"
-        f"{source}"
+        "Сгенерируй ровно 10 console-тестов (stdin -> stdout, java main) "
+        "ПОСЛЕ ревью. Workability ОБЯЗАНЫ реально отрабатывать на SOURCE "
+        "(без краша). У каждого теста заполняй description и "
+        "error_description (для exploit - подробно). "
+        f"{exploit_hint} "
+        "Ответ - только JSON по схеме. Без markdown и без JUnit.\n\n"
+        f"KNOWN_ISSUES:\n{issues_text}\n\nSOURCE:\n{source}"
     )
     return [
         {"role": "system", "content": TEST_SCRIPTS_SYSTEM},
         {"role": "user", "content": user},
     ]
+
+
+def format_issues_for_test_scripts(issues: list[dict[str, Any]]) -> str:
+    """Краткий список issues ревью для генерации тестов (после logical review)."""
+    if not issues:
+        return "(no issues)"
+    lines: list[str] = []
+    for item in issues:
+        issue_id = str(item.get("id", "?"))
+        severity = str(item.get("severity", "warning"))
+        code = str(item.get("code", "?"))
+        title = str(item.get("title", ""))
+        message = str(item.get("message", ""))
+        explanation = str(item.get("explanation", ""))[:240]
+        start_line = item.get("start_line", "?")
+        end_line = item.get("end_line", start_line)
+        lines.append(
+            f"- {issue_id}|{severity}|{code}|L{start_line}-{end_line}|{title}: "
+            f"{message}"
+            + (f" | {explanation}" if explanation else "")
+        )
+    return "\n".join(lines)
 
 
 def build_flowchart_messages(

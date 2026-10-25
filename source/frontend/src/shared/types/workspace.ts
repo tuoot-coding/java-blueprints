@@ -86,6 +86,11 @@ export interface BehaviorTestCase {
   expected_stdout: string;
   expected_exit_code: number;
   main_class_hint?: string | null;
+  purpose?: string;
+  related_issue_id?: string | null;
+  expects_original_failure?: boolean;
+  description?: string;
+  error_description?: string;
 }
 
 export interface BehaviorTestRun {
@@ -101,6 +106,25 @@ export interface BehaviorTestRun {
   matched_expected_original: boolean;
   matched_expected_generated: boolean;
   detail: string;
+  purpose?: string;
+  related_issue_id?: string | null;
+  expects_original_failure?: boolean;
+  description?: string;
+  error_description?: string;
+  original_stderr?: string;
+  generated_stderr?: string;
+  original_wall_ms?: number | null;
+  original_cpu_user_ms?: number | null;
+  original_cpu_sys_ms?: number | null;
+  original_max_rss_kb?: number | null;
+  generated_wall_ms?: number | null;
+  generated_cpu_user_ms?: number | null;
+  generated_cpu_sys_ms?: number | null;
+  generated_max_rss_kb?: number | null;
+  wall_ratio?: number | null;
+  cpu_ratio?: number | null;
+  rss_ratio?: number | null;
+  resources_vs_baseline?: string;
 }
 
 export interface BehaviorCompare {

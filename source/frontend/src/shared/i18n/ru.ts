@@ -90,6 +90,8 @@ export const uiText = {
   graphCreateBlankHint:
     "Добавляйте шаблоны из палитры (кнопка блока), заполняйте условие/код и соединяйте стрелками. Цикл - большой контейнер: тяните от нижней точки «body» к элементам тела.",
   graphPaletteFreeHint: "Клик по блоку - добавить шаблон свободно (без выбора на схеме).",
+  graphPaletteDragHint:
+    "Перетащи блок на холст или кликни - вставка свободно, без автосвязей. Связи - вручную.",
   graphStale: "Устарело: код изменен",
   graphMethod: "Метод",
   graphModules: "Модули",
@@ -194,6 +196,13 @@ export const uiText = {
   testCompareIsolated: "Изоляция: Docker, один контейнер на вариант кода",
   testCompareEmpty: "Тестовые сценарии не получены",
   testCompareNotes: "детали",
+  testCompareExploit: "exploit",
+  testCompareInvalid: "невалидный скрипт",
+  testCompareErrorDesc: "ошибка",
+  testCompareBaseline: "к baseline",
+  testCompareWall: "wall",
+  testCompareCpu: "cpu",
+  testCompareRss: "rss",
   testResultsTitle: "Метрики",
   testToastTitle: "Проверки после LLM",
   testToastPassed: "пройдено",

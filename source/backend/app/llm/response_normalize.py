@@ -154,11 +154,7 @@ def _resolve_affects_execution(
     # Критичная complexity (Big O) помечается error и влияет на оценку качества.
     if code.startswith("llm.complexity.") and severity == "error":
         return True
-    if code.startswith(("llm.structure.", "llm.bloat.")):
-        return False
-    if code.startswith("llm.complexity."):
-        return False
-    return True
+    return not code.startswith(("llm.structure.", "llm.bloat.", "llm.complexity."))
 
 
 def _as_int(value: object, default: int) -> int:

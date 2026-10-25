@@ -25,12 +25,18 @@ logger = logging.getLogger(__name__)
 _CLASS_RE = re.compile(
     r"\b(?:public\s+)?(?:final\s+|abstract\s+)?class\s+([A-Za-z_][A-Za-z0-9_]*)\b"
 )
+# interface / enum / record тоже полноценный compilation unit без обёртки.
+_TYPE_DECL_RE = re.compile(
+    r"\b(?:public\s+)?(?:final\s+|abstract\s+|sealed\s+)?"
+    r"(?:class|interface|enum|record)\s+[A-Za-z_][A-Za-z0-9_]*\b"
+)
 _MAX_OUTPUT = 32_000
 _SAFE_CLASS_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
-# Фиксированный скрипт внутри контейнера: без подстановки пользовательского кода в shell.
+# Фиксированный скрипт: java запускается напрямую, exit/метрики пишутся всегда.
+# /usr/bin/time - только для rss/cpu; на exit code не влияет (java в подпроцессе).
 _SUITE_SCRIPT = """#!/bin/bash
-set -eu
+set -u
 CLASS="$1"
 CASE_TIMEOUT="$2"
 javac "${CLASS}.java" > compile.out 2> compile.err
@@ -42,11 +48,44 @@ fi
 echo COMPILE_OK > suite.status
 i=0
 while [ -f "case_${i}.in" ]; do
-  set +e
-  timeout --signal=KILL "${CASE_TIMEOUT}" java -Xmx128m "${CLASS}" \
-    < "case_${i}.in" > "case_${i}.out" 2> "case_${i}.err"
-  echo $? > "case_${i}.exit"
-  set -e
+  WALL_MS=0
+  CPU_USER_MS=0
+  CPU_SYS_MS=0
+  MAX_RSS_KB=0
+  START_NS=$(date +%s%N 2>/dev/null || echo 0)
+  if command -v /usr/bin/time >/dev/null 2>&1; then
+    /usr/bin/time -f '%e %U %S %M' -o "case_${i}.time" \
+      timeout --signal=KILL "${CASE_TIMEOUT}" java -Xmx128m "${CLASS}" \
+      < "case_${i}.in" > "case_${i}.out" 2> "case_${i}.err"
+    EC=$?
+    if [ -f "case_${i}.time" ]; then
+      # GNU time: real user sys maxrss_kb
+      REAL_S=$(awk '{print $1}' "case_${i}.time" 2>/dev/null || echo 0)
+      USER_S=$(awk '{print $2}' "case_${i}.time" 2>/dev/null || echo 0)
+      SYS_S=$(awk '{print $3}' "case_${i}.time" 2>/dev/null || echo 0)
+      RSS_KB=$(awk '{print $4}' "case_${i}.time" 2>/dev/null || echo 0)
+      WALL_MS=$(awk -v v="${REAL_S:-0}" 'BEGIN { printf "%d", (v+0)*1000 }')
+      CPU_USER_MS=$(awk -v v="${USER_S:-0}" 'BEGIN { printf "%d", (v+0)*1000 }')
+      CPU_SYS_MS=$(awk -v v="${SYS_S:-0}" 'BEGIN { printf "%d", (v+0)*1000 }')
+      MAX_RSS_KB=$(awk -v v="${RSS_KB:-0}" 'BEGIN { printf "%d", (v+0) }')
+    fi
+  else
+    timeout --signal=KILL "${CASE_TIMEOUT}" java -Xmx128m "${CLASS}" \
+      < "case_${i}.in" > "case_${i}.out" 2> "case_${i}.err"
+    EC=$?
+  fi
+  END_NS=$(date +%s%N 2>/dev/null || echo 0)
+  if [ "$WALL_MS" = "0" ] && [ "$START_NS" != "0" ] && [ "$END_NS" != "0" ]; then
+    WALL_MS=$(awk -v s="$START_NS" -v e="$END_NS" \
+      'BEGIN { d=(e-s)/1000000; if (d<0) d=0; printf "%d", d }')
+  fi
+  echo "${EC:-1}" > "case_${i}.exit"
+  {
+    echo "wall_ms=${WALL_MS}"
+    echo "cpu_user_ms=${CPU_USER_MS}"
+    echo "cpu_sys_ms=${CPU_SYS_MS}"
+    echo "max_rss_kb=${MAX_RSS_KB}"
+  } > "case_${i}.metrics"
   i=$((i + 1))
 done
 echo DONE > suite.status
@@ -71,6 +110,16 @@ class JavaSuiteCase:
 
 
 @dataclass(frozen=True, slots=True)
+class JavaCaseResourceMetrics:
+    """Ресурсы одного прогона: время, CPU, пиковая RSS."""
+
+    wall_ms: int | None = None
+    cpu_user_ms: int | None = None
+    cpu_sys_ms: int | None = None
+    max_rss_kb: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class JavaSuiteCaseResult:
     case_id: str
     status: str
@@ -78,6 +127,7 @@ class JavaSuiteCaseResult:
     stdout: str
     stderr: str
     detail: str
+    metrics: JavaCaseResourceMetrics | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,14 +156,44 @@ def docker_available() -> bool:
 
 
 def detect_main_class(source: str, hint: str | None = None) -> str:
-    if hint and _SAFE_CLASS_RE.fullmatch(hint):
-        return hint
+    """Имя класса для javac/java.
+
+    Hint учитывается только если такой class есть в исходнике. Иначе stale hint
+    (например StructuralTest от LLM) при фрагменте с голым main даёт
+    unnamed-class preview error в JDK 21.
+    """
     names = _CLASS_RE.findall(source)
+    if hint and _SAFE_CLASS_RE.fullmatch(hint) and hint in names:
+        return hint
     if "Main" in names:
         return "Main"
     if names:
         return names[0]
+    # Нет class: имя файла для ensure_named_compilation_unit.
+    if hint and _SAFE_CLASS_RE.fullmatch(hint):
+        return hint
     return "Main"
+
+
+def ensure_named_compilation_unit(source: str, class_name: str) -> str:
+    """Оборачивает фрагмент без type declaration в named class.
+
+    Compact/unnamed classes в JDK 21 требуют --enable-preview; контейнер
+    eclipse-temurin:21-jdk запускает javac без preview.
+    """
+    if not _SAFE_CLASS_RE.fullmatch(class_name):
+        raise ValueError("invalid_main_class")
+    if _TYPE_DECL_RE.search(source):
+        return source
+    body = source.strip("\n")
+    if not body.strip():
+        body = "    public static void main(String[] args) {}"
+    else:
+        indented = "\n".join(
+            ("    " + line) if line.strip() else line for line in body.splitlines()
+        )
+        body = indented
+    return f"public class {class_name} {{\n{body}\n}}\n"
 
 
 def run_java_source(
@@ -219,6 +299,26 @@ def run_java_test_suite(
             ),
         )
 
+    try:
+        compilable_source = ensure_named_compilation_unit(source, class_name)
+    except ValueError:
+        return JavaSuiteResult(
+            status="error",
+            detail="invalid_main_class",
+            container_name=None,
+            results=tuple(
+                JavaSuiteCaseResult(
+                    case_id=case.case_id,
+                    status="error",
+                    exit_code=None,
+                    stdout="",
+                    stderr="",
+                    detail="invalid_main_class",
+                )
+                for case in case_list
+            ),
+        )
+
     case_timeout = (
         case_timeout_seconds if case_timeout_seconds is not None else cfg.java_case_timeout_seconds
     )
@@ -237,7 +337,7 @@ def run_java_test_suite(
     with _open_java_work_dir(cfg, run_id=run_id) as work:
         _prepare_work_dir(
             work=work,
-            source=source,
+            source=compilable_source,
             class_name=class_name,
             cases=case_list,
             case_timeout=case_timeout,
@@ -478,6 +578,7 @@ def _read_suite_results(
         exit_code = _read_int_file(work / f"case_{index}.exit")
         stdout = _read_text_file(work / f"case_{index}.out")[:_MAX_OUTPUT]
         stderr = _read_text_file(work / f"case_{index}.err")[:_MAX_OUTPUT]
+        metrics = _read_case_metrics(work / f"case_{index}.metrics")
         if exit_code is None:
             results.append(
                 JavaSuiteCaseResult(
@@ -487,6 +588,7 @@ def _read_suite_results(
                     stdout=stdout,
                     stderr=stderr,
                     detail="missing_case_result",
+                    metrics=metrics,
                 )
             )
             continue
@@ -500,6 +602,7 @@ def _read_suite_results(
                     stdout=stdout,
                     stderr=stderr,
                     detail="case_timeout",
+                    metrics=metrics,
                 )
             )
             continue
@@ -511,6 +614,7 @@ def _read_suite_results(
                 stdout=stdout,
                 stderr=stderr,
                 detail="ok" if exit_code == 0 else "nonzero_exit",
+                metrics=metrics,
             )
         )
 
@@ -552,3 +656,35 @@ def _read_int_file(path: Path) -> int | None:
         return int(raw.split()[0])
     except ValueError:
         return None
+
+
+def _read_case_metrics(path: Path) -> JavaCaseResourceMetrics | None:
+    raw = _read_text_file(path)
+    if not raw.strip():
+        return None
+    values: dict[str, int | None] = {
+        "wall_ms": None,
+        "cpu_user_ms": None,
+        "cpu_sys_ms": None,
+        "max_rss_kb": None,
+    }
+    for line in raw.splitlines():
+        if "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if key not in values:
+            continue
+        try:
+            parsed = int(float(value.strip()))
+        except ValueError:
+            continue
+        values[key] = max(0, parsed)
+    if all(item is None for item in values.values()):
+        return None
+    return JavaCaseResourceMetrics(
+        wall_ms=values["wall_ms"],
+        cpu_user_ms=values["cpu_user_ms"],
+        cpu_sys_ms=values["cpu_sys_ms"],
+        max_rss_kb=values["max_rss_kb"],
+    )
