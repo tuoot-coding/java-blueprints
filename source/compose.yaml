@@ -1,0 +1,155 @@
+# Полный стек: MySQL + Mailpit + Backend + Frontend.
+# Быстрый старт: copy .env.example .env && docker pull eclipse-temurin:21-jdk && docker compose up --build
+# UI: http://127.0.0.1:3000  API: http://127.0.0.1:8000  Mailpit: http://127.0.0.1:8025
+# Socket открывается одноразовым chmod для uid app; пользовательский Java его не видит.
+
+name: java-blueprints
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-dev-root-change-me}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-java_blueprints_auth}
+      MYSQL_USER: ${MYSQL_USER:-jb_auth}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-dev-auth-change-me}
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "-u${MYSQL_USER:-jb_auth}",
+          "-p${MYSQL_PASSWORD:-dev-auth-change-me}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 25s
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+    restart: unless-stopped
+
+  # Docker Desktop: socket root:root 660. Открываем для Backend (uid 10001), без proxy-образа.
+  docker-sock-perm:
+    image: java-blueprints-backend
+    user: "0:0"
+    entrypoint: ["chmod", "666", "/var/run/docker.sock"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: "no"
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-}
+      API_HOST: 0.0.0.0
+      API_PORT: "8000"
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      DATABASE_URL: sqlite:////data/java_blueprints.sqlite3
+      STORAGE_DIR: /data/storage
+      AUTH_STORE: mysql
+      AUTH_MYSQL_DSN: mysql://${MYSQL_USER:-jb_auth}:${MYSQL_PASSWORD:-dev-auth-change-me}@mysql:3306/${MYSQL_DATABASE:-java_blueprints_auth}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      AUTH_COOKIE_SAMESITE: strict
+      AUTH_API_GATE_ENABLED: ${AUTH_API_GATE_ENABLED:-false}
+      AUTH_DEV_AUTO_VERIFY_EMAIL: ${AUTH_DEV_AUTO_VERIFY_EMAIL:-true}
+      AUTH_PASSWORD_MIN_LENGTH: ${AUTH_PASSWORD_MIN_LENGTH:-1}
+      AUTH_ENFORCE_PASSWORD_COMPLEXITY: ${AUTH_ENFORCE_PASSWORD_COMPLEXITY:-false}
+      AUTH_HIBP_ENABLED: ${AUTH_HIBP_ENABLED:-false}
+      JAVA_DOCKER_IMAGE: ${JAVA_DOCKER_IMAGE:-eclipse-temurin:21-jdk}
+      JAVA_DOCKER_MEMORY: ${JAVA_DOCKER_MEMORY:-384m}
+      JAVA_DOCKER_CPUS: ${JAVA_DOCKER_CPUS:-1.0}
+      JAVA_DOCKER_PIDS_LIMIT: ${JAVA_DOCKER_PIDS_LIMIT:-64}
+      JAVA_SUITE_TIMEOUT_SECONDS: ${JAVA_SUITE_TIMEOUT_SECONDS:-300}
+      JAVA_CASE_TIMEOUT_SECONDS: ${JAVA_CASE_TIMEOUT_SECONDS:-30}
+      JAVA_WORK_DIR: /java-work
+      JAVA_DOCKER_WORK_VOLUME: jb-java-work
+      PUBLIC_APP_BASE_URL: ${PUBLIC_APP_BASE_URL:-http://127.0.0.1:3000}
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_FROM: ${SMTP_FROM:-noreply@java-blueprints.local}
+      SMTP_USE_TLS: "false"
+      LLM_ENABLED: ${LLM_ENABLED:-true}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com}
+      LLM_OAUTH_URL: ${LLM_OAUTH_URL:-https://ngw.devices.sberbank.ru:9443/api/v2/oauth}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
+      LLM_SCOPE: ${LLM_SCOPE:-GIGACHAT_API_PERS}
+      LLM_VERIFY_SSL: ${LLM_VERIFY_SSL:-true}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-180}
+      LLM_API_KEY_FILE: /run/secrets/llm_api
+      LOG_TO_FILE: "true"
+      LOG_FILE: /data/logs/java_blueprints.log
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - backend-data:/data
+      - jb-java-work:/java-work
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./api:/run/secrets/llm_api:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+      docker-sock-perm:
+        condition: service_completed_successfully
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://127.0.0.1:8000}
+    environment:
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  backend-data:
+  jb-java-work:
+    name: jb-java-work
+  mysql-data:

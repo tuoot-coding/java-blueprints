@@ -1,0 +1,8 @@
+# Учетные данные DeepSeek API. Скопируйте как файл `api` в корне репозитория.
+# Файл `api` в git не коммитится.
+# Ключ: https://platform.deepseek.com/api_keys
+
+Provider deepseek
+API Key sk-ваш_deepseek_api_key
+Base URL https://api.deepseek.com
+Model deepseek-chat

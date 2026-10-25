@@ -1,0 +1,305 @@
+@import "tailwindcss";
+
+/*
+ * Темы UI: data-theme на <html>.
+ * Переопределяем шкалы zinc/slate Tailwind v4, чтобы существующие классы
+ * (bg-zinc-950, text-zinc-100, border-slate-600 ...) подхватывали тему.
+ */
+
+:root,
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #09090b;
+  --foreground: #f4f4f5;
+  --panel: #09090b;
+  --panel-border: #27272a;
+  --accent: #38bdf8;
+  --scheme-canvas: #0b1220;
+  --theme-glow: transparent;
+  --theme-grid: #334155;
+
+  --color-zinc-50: #fafafa;
+  --color-zinc-100: #f4f4f5;
+  --color-zinc-200: #e4e4e7;
+  --color-zinc-300: #d4d4d8;
+  --color-zinc-400: #a1a1aa;
+  --color-zinc-500: #71717a;
+  --color-zinc-600: #52525b;
+  --color-zinc-700: #3f3f46;
+  --color-zinc-800: #27272a;
+  --color-zinc-900: #18181b;
+  --color-zinc-950: #09090b;
+
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --background: #f4f4f5;
+  --foreground: #18181b;
+  --panel: #ffffff;
+  --panel-border: #d4d4d8;
+  --accent: #0284c7;
+  --scheme-canvas: #e2e8f0;
+  --theme-glow: transparent;
+  --theme-grid: #94a3b8;
+
+  --color-zinc-50: #18181b;
+  --color-zinc-100: #27272a;
+  --color-zinc-200: #3f3f46;
+  --color-zinc-300: #52525b;
+  --color-zinc-400: #71717a;
+  --color-zinc-500: #a1a1aa;
+  --color-zinc-600: #d4d4d8;
+  --color-zinc-700: #e4e4e7;
+  --color-zinc-800: #f4f4f5;
+  --color-zinc-900: #fafafa;
+  --color-zinc-950: #ffffff;
+
+  --color-slate-50: #020617;
+  --color-slate-100: #0f172a;
+  --color-slate-200: #1e293b;
+  --color-slate-300: #334155;
+  --color-slate-400: #64748b;
+  --color-slate-500: #94a3b8;
+  --color-slate-600: #cbd5e1;
+  --color-slate-700: #e2e8f0;
+  --color-slate-800: #f1f5f9;
+  --color-slate-900: #f8fafc;
+  --color-slate-950: #ffffff;
+}
+
+html[data-theme="neon"] {
+  color-scheme: dark;
+  --background: #05010f;
+  --foreground: #f5d0fe;
+  --panel: #0b0420;
+  --panel-border: #d946ef66;
+  --accent: #22d3ee;
+  --scheme-canvas: #0a0618;
+  --theme-glow: radial-gradient(ellipse at 20% 0%, #d946ef33, transparent 45%),
+    radial-gradient(ellipse at 80% 10%, #22d3ee22, transparent 40%);
+  --theme-grid: #a855f766;
+
+  --color-zinc-50: #fdf4ff;
+  --color-zinc-100: #fae8ff;
+  --color-zinc-200: #f5d0fe;
+  --color-zinc-300: #e879f9;
+  --color-zinc-400: #c084fc;
+  --color-zinc-500: #a855f7;
+  --color-zinc-600: #7e22ce;
+  --color-zinc-700: #4a044e;
+  --color-zinc-800: #2a0a3d;
+  --color-zinc-900: #14061f;
+  --color-zinc-950: #05010f;
+
+  --color-slate-50: #ecfeff;
+  --color-slate-100: #cffafe;
+  --color-slate-200: #a5f3fc;
+  --color-slate-300: #67e8f9;
+  --color-slate-400: #22d3ee;
+  --color-slate-500: #06b6d4;
+  --color-slate-600: #0e7490;
+  --color-slate-700: #155e75;
+  --color-slate-800: #164e63;
+  --color-slate-900: #0c2a3a;
+  --color-slate-950: #071520;
+
+  --color-sky-100: #cffafe;
+  --color-sky-300: #67e8f9;
+  --color-sky-700: #0e7490;
+  --color-sky-800: #155e75;
+  --color-sky-900: #083344;
+  --color-sky-950: #042f2e;
+  --color-amber-200: #f0abfc;
+  --color-amber-300: #e879f9;
+  --color-amber-700: #a21caf;
+  --color-amber-950: #4a044e;
+  --color-emerald-100: #a5f3fc;
+  --color-emerald-300: #22d3ee;
+  --color-emerald-700: #0e7490;
+  --color-violet-100: #f5d0fe;
+  --color-violet-700: #a21caf;
+  --color-violet-900: #701a75;
+  --color-violet-950: #4a044e;
+}
+
+html[data-theme="terminal"] {
+  color-scheme: dark;
+  --background: #010a05;
+  --foreground: #bbf7d0;
+  --panel: #03140a;
+  --panel-border: #16a34a66;
+  --accent: #4ade80;
+  --scheme-canvas: #020f08;
+  --theme-glow: linear-gradient(180deg, #14532d22, transparent 35%);
+  --theme-grid: #16653488;
+
+  --color-zinc-50: #f0fdf4;
+  --color-zinc-100: #dcfce7;
+  --color-zinc-200: #bbf7d0;
+  --color-zinc-300: #86efac;
+  --color-zinc-400: #4ade80;
+  --color-zinc-500: #22c55e;
+  --color-zinc-600: #15803d;
+  --color-zinc-700: #14532d;
+  --color-zinc-800: #052e16;
+  --color-zinc-900: #021a0c;
+  --color-zinc-950: #010a05;
+
+  --color-slate-50: #f0fdf4;
+  --color-slate-100: #dcfce7;
+  --color-slate-200: #bbf7d0;
+  --color-slate-300: #86efac;
+  --color-slate-400: #4ade80;
+  --color-slate-500: #16a34a;
+  --color-slate-600: #166534;
+  --color-slate-700: #14532d;
+  --color-slate-800: #052e16;
+  --color-slate-900: #021a0c;
+  --color-slate-950: #010805;
+
+  --color-sky-100: #dcfce7;
+  --color-sky-300: #86efac;
+  --color-sky-700: #15803d;
+  --color-sky-800: #166534;
+  --color-sky-900: #14532d;
+  --color-sky-950: #052e16;
+  --color-amber-200: #bef264;
+  --color-amber-300: #a3e635;
+  --color-amber-700: #4d7c0f;
+  --color-amber-950: #1a2e05;
+  --color-emerald-100: #bbf7d0;
+  --color-emerald-300: #4ade80;
+  --color-emerald-700: #15803d;
+}
+
+html[data-theme="galactic"] {
+  color-scheme: dark;
+  --background: #07061a;
+  --foreground: #e0e7ff;
+  --panel: #0c0a24;
+  --panel-border: #6366f166;
+  --accent: #a78bfa;
+  --scheme-canvas: #08071c;
+  --theme-glow: radial-gradient(ellipse at 10% 0%, #4f46e555, transparent 42%),
+    radial-gradient(ellipse at 90% 20%, #7c3aed33, transparent 38%),
+    radial-gradient(ellipse at 50% 100%, #312e8144, transparent 50%);
+  --theme-grid: #6366f155;
+
+  --color-zinc-50: #eef2ff;
+  --color-zinc-100: #e0e7ff;
+  --color-zinc-200: #c7d2fe;
+  --color-zinc-300: #a5b4fc;
+  --color-zinc-400: #818cf8;
+  --color-zinc-500: #6366f1;
+  --color-zinc-600: #4338ca;
+  --color-zinc-700: #312e81;
+  --color-zinc-800: #1e1b4b;
+  --color-zinc-900: #12103a;
+  --color-zinc-950: #07061a;
+
+  --color-slate-50: #f5f3ff;
+  --color-slate-100: #ede9fe;
+  --color-slate-200: #ddd6fe;
+  --color-slate-300: #c4b5fd;
+  --color-slate-400: #a78bfa;
+  --color-slate-500: #8b5cf6;
+  --color-slate-600: #6d28d9;
+  --color-slate-700: #4c1d95;
+  --color-slate-800: #2e1065;
+  --color-slate-900: #1a0b3c;
+  --color-slate-950: #0b061f;
+
+  --color-sky-100: #e0e7ff;
+  --color-sky-300: #a5b4fc;
+  --color-sky-700: #4338ca;
+  --color-sky-800: #3730a3;
+  --color-sky-900: #312e81;
+  --color-sky-950: #1e1b4b;
+  --color-amber-200: #ddd6fe;
+  --color-amber-300: #c4b5fd;
+  --color-amber-700: #6d28d9;
+  --color-amber-950: #2e1065;
+  --color-emerald-100: #c7d2fe;
+  --color-emerald-300: #818cf8;
+  --color-emerald-700: #4338ca;
+  --color-violet-100: #ede9fe;
+  --color-violet-700: #6d28d9;
+  --color-violet-900: #4c1d95;
+  --color-violet-950: #2e1065;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--background);
+  background-image: var(--theme-glow);
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  overflow: hidden;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+html[data-theme="terminal"] body {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Логическая схема подхватывает фон темы. */
+.scheme-canvas {
+  background-color: var(--scheme-canvas) !important;
+}
+
+.scheme-canvas .react-flow__edge-path {
+  stroke-linecap: round;
+}
+
+.scheme-canvas .react-flow__attribution {
+  display: none;
+}
+
+.scheme-canvas .react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--accent) !important;
+}
+
+.scheme-canvas .react-flow__background pattern circle {
+  fill: var(--theme-grid) !important;
+}
