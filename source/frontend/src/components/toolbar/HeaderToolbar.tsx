@@ -1,11 +1,14 @@
 "use client";
 
 import { FileCode2, Save, SearchCode, UserRound } from "lucide-react";
+import Link from "next/link";
 import { useRef, type ReactNode } from "react";
 
 import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
 import { uiText } from "@/shared/i18n/ru";
 import type { UiThemeId } from "@/shared/theme/uiTheme";
+
+const BRAND_LOGO_SRC = "/brand-logo.png";
 
 interface HeaderToolbarProps {
   fileName: string | null;
@@ -40,15 +43,28 @@ export function HeaderToolbar({
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-3 border-b border-zinc-800 bg-zinc-950/90 px-3 backdrop-blur-sm">
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold tracking-wide text-zinc-100">
-          {uiText.appName}
-          <span className="ml-2 text-xs font-normal text-zinc-500">{uiText.appSubtitle}</span>
-        </div>
-        <div className="truncate text-xs text-zinc-500">
-          {fileName ?? uiText.projectUntitled}
-          {" - "}
-          {dirty ? uiText.projectDirty : uiText.projectClean}
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <Link
+          href="/"
+          className="inline-flex shrink-0 items-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+          aria-label={uiText.appName}
+          title={uiText.appName}
+        >
+          {/* Статический бренд-ассет из /public */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={BRAND_LOGO_SRC}
+            alt={uiText.appName}
+            className="h-8 w-auto max-w-[220px] object-contain object-left"
+          />
+        </Link>
+        <div className="min-w-0">
+          <div className="truncate text-xs font-medium text-zinc-300">{uiText.appSubtitle}</div>
+          <div className="truncate text-xs text-zinc-500">
+            {fileName ?? uiText.projectUntitled}
+            {" - "}
+            {dirty ? uiText.projectDirty : uiText.projectClean}
+          </div>
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { uiText } from "@/shared/i18n/ru";
@@ -78,10 +79,26 @@ export function AuthDialog({
         aria-modal="true"
         className="w-full max-w-md rounded-xl border border-zinc-700 bg-zinc-950 shadow-2xl"
       >
-        <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
-          <h2 className="text-sm font-semibold text-zinc-100">
-            {mode === "login" ? uiText.authTitleLogin : uiText.authTitleRegister}
-          </h2>
+        <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Link
+              href="/"
+              className="inline-flex shrink-0 items-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+              aria-label={uiText.appName}
+              title={uiText.appName}
+              onClick={onClose}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/brand-logo.png"
+                alt={uiText.appName}
+                className="h-7 w-auto max-w-[160px] object-contain object-left"
+              />
+            </Link>
+            <h2 className="truncate text-sm font-semibold text-zinc-100">
+              {mode === "login" ? uiText.authTitleLogin : uiText.authTitleRegister}
+            </h2>
+          </div>
           <button
             type="button"
             className="rounded border border-zinc-700 px-2 py-0.5 text-[10px] text-zinc-300 hover:bg-zinc-800"

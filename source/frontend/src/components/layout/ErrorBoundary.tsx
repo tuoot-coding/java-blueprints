@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
 import { uiText } from "@/shared/i18n/ru";
@@ -32,6 +33,20 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     if (this.state.hasError) {
       return (
         <div className="flex h-screen flex-col items-center justify-center gap-3 bg-zinc-950 px-6 text-center text-zinc-200">
+          <Link
+            href="/"
+            className="inline-flex items-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+            aria-label={uiText.appName}
+            title={uiText.appName}
+            onClick={() => this.setState({ hasError: false, message: "" })}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand-logo.png"
+              alt={uiText.appName}
+              className="h-10 w-auto max-w-[280px] object-contain"
+            />
+          </Link>
           <p className="text-sm font-medium">{uiText.appCrashTitle}</p>
           <p className="max-w-lg text-xs text-zinc-500">{this.state.message}</p>
           <button

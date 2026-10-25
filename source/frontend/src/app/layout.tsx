@@ -25,6 +25,10 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: uiText.appName,
   description: "Визуальная среда для анализа и преобразования Java-кода (Frontend Lite).",
+  icons: {
+    icon: [{ url: "/favicon.ico", type: "image/x-icon" }],
+    shortcut: ["/favicon.ico"],
+  },
 };
 
 /** Анти-мигание темы до гидрации React. */
