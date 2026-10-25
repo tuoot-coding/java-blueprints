@@ -282,6 +282,64 @@ export const uiText = {
     "В редакторе есть несохраненные изменения. Заменить содержимое выбранным файлом?",
 
   saveDialogTitle: "Сохранить Java-файл",
+
+  landingNavAbout: "О проекте",
+  landingNavCapabilities: "Возможности",
+  landingNavArchitecture: "Архитектура",
+  landingNavTeam: "Команда",
+  landingCtaMonitor: "Войти в мониторинг",
+  landingCtaSecondary: "К возможностям",
+  landingHeroTitle: "Визуальная среда программирования для Java",
+  landingHeroLead:
+    "Веб-инструмент разбора Java-кода, построения модульной логической схемы, диагностики, безопасных правок и проверки поведения в изолированных Docker-контейнерах JDK 21.",
+  landingHeroCase: "Кейс AXENIX: путь Java ↔ блок-схема с контролем сохранения результата.",
+  landingAboutTitle: "Зачем нужен Java Blueprints",
+  landingAboutBody:
+    "Решение кейса Axenix «Визуальная среда программирования». Инструмент понимает программу и как код, и как граф: помогает улучшить исходник и доказывает, что поведение сохранилось.",
+  landingPathTitle: "Пользовательский путь по ТЗ",
+  landingPath1: "Загрузить .java",
+  landingPath2: "Разобрать код",
+  landingPath3: "Построить граф / модульную схему",
+  landingPath4: "Исследовать и править",
+  landingPath5: "Собрать Java",
+  landingPath6: "Запустить и сравнить поведение",
+  landingCapabilitiesTitle: "Возможности",
+  landingCapScheme:
+    "Модульная логическая схема на React Flow: блоки, связи, палитра шаблонов, полноэкранный режим",
+  landingCapEditor: "Monaco-редактор с маркерами диагностики и синхронизацией с Backend",
+  landingCapParse: "Честный разбор через tree-sitter-java без фиктивного CFG",
+  landingCapAnalysis:
+    "Статический анализ: недостижимый код, пустые блоки, эвристика сложности, точечные фиксы",
+  landingCapLlm: "LLM-ремонт: оптимизация и декомпозиция, сравнение кода и схем до/после",
+  landingCapBehavior:
+    "Проверка поведения в двух эфемерных Docker JDK-контейнерах без host-fallback",
+  landingCapProject: "Проводник проекта, локальное сохранение и экспорт, темы интерфейса",
+  landingCapAuth: "Auth: регистрация, подтверждение email, сессии httpOnly + CSRF, кабинет",
+  landingArchTitle: "Архитектура",
+  landingArchBody:
+    "Стек Frontend (Next.js) + Backend (FastAPI) с границей REST API /api/v1. Frontend — IDE, черновики и layout схемы. Backend — tree-sitter-java, IR/CFG, диагностика, ревизии, LLM-ремонт и поведенческие прогоны в eclipse-temurin:21-jdk.",
+  landingArchTruth:
+    "Канонический артефакт — текст Java-исходника ревизии. AST, IR и CFG — производные. Смысловые правки идут через проверенные патчи и повторный разбор.",
+  landingArchLevelsTitle: "Уровни визуализации",
+  landingArchLevel1: "Дерево проекта — файлы, классы, методы",
+  landingArchLevel2: "Граф / модульная схема выбранного метода или логики",
+  landingArchLevel3: "Инспектор блока — свойства и привязка к фрагменту исходника",
+  landingStackTitle: "Стек",
+  landingStackFrontend: "Frontend: Next.js 15, React 19, TypeScript, Tailwind CSS 4, Monaco, React Flow",
+  landingStackBackend: "Backend: Python 3.12+, FastAPI, Pydantic v2, tree-sitter-java, SQLite",
+  landingStackRuntime: "Исполнение Java: Docker, eclipse-temurin:21-jdk, лимиты CPU/RAM/PIDs",
+  landingFooterProduct: "Продукт",
+  landingFooterTeam: "Команда",
+  landingFooterContacts: "Контакты",
+  landingFooterRights: "Все права защищены.",
+  landingFooterRepo: "Репозиторий GitHub",
+  landingFooterSite: "Рабочий стенд",
+  landingTeamLead: "Teamleader, Frontend, API",
+  landingTeamBackend: "Backend, API, Идеи",
+  landingTeamQa: "QA-Tester, Pentesting",
+  landingMemberAlexander: "Александр Пропастин",
+  landingMemberStanislav: "Станислав Шуть",
+  landingMemberNikita: "Никита Бакай",
 } as const;
 
 export type UiTextKey = keyof typeof uiText;

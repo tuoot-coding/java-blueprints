@@ -261,7 +261,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
@@ -305,4 +305,280 @@ html[data-theme="terminal"] body {
 
 .scheme-canvas .react-flow__background pattern circle {
   fill: var(--theme-grid) !important;
+}
+
+/*
+ * Material You (M3) landing — tonal surfaces на акценте сайта (--accent).
+ * Строгий M3: filled/tonal buttons, surface containers, без декоративного шума.
+ */
+.m3-landing {
+  --md-primary: var(--accent);
+  --md-on-primary: #041018;
+  --md-primary-container: color-mix(in srgb, var(--accent) 28%, var(--panel));
+  --md-on-primary-container: color-mix(in srgb, var(--accent) 82%, var(--foreground));
+  --md-surface: var(--background);
+  --md-surface-container: color-mix(in srgb, var(--panel) 88%, var(--accent) 12%);
+  --md-surface-container-high: color-mix(in srgb, var(--panel) 78%, var(--accent) 22%);
+  --md-surface-container-lowest: var(--panel);
+  --md-on-surface: var(--foreground);
+  --md-on-surface-variant: color-mix(in srgb, var(--foreground) 62%, transparent);
+  --md-outline: var(--panel-border);
+  --md-outline-variant: color-mix(in srgb, var(--panel-border) 70%, transparent);
+  --md-radius-sm: 12px;
+  --md-radius-md: 16px;
+  --md-radius-lg: 28px;
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+}
+
+html[data-theme="light"] .m3-landing {
+  --md-on-primary: #f8fbff;
+}
+
+.m3-shell {
+  width: min(1120px, calc(100% - 64px));
+  margin-inline: auto;
+}
+
+.m3-top-bar {
+  background: color-mix(in srgb, var(--md-surface) 88%, transparent);
+  border-bottom: 1px solid var(--md-outline-variant);
+  backdrop-filter: blur(10px);
+}
+
+.m3-nav-link {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  color: var(--md-on-surface-variant);
+  text-decoration: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.m3-nav-link:hover {
+  background: var(--md-surface-container);
+  color: var(--md-on-surface);
+}
+
+.m3-btn-filled,
+.m3-btn-tonal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0 1.25rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  transition: filter 0.15s ease, background-color 0.15s ease;
+}
+
+.m3-btn-filled {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+}
+
+.m3-btn-filled:hover {
+  filter: brightness(1.06);
+}
+
+.m3-btn-tonal {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.m3-btn-tonal:hover {
+  filter: brightness(1.05);
+}
+
+.m3-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--md-primary);
+}
+
+.m3-display {
+  font-size: clamp(2.25rem, 3.2vw, 3.25rem);
+  line-height: 1.12;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  max-width: 18ch;
+}
+
+.m3-title {
+  font-size: 1.75rem;
+  line-height: 1.25;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.m3-title-sm {
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.m3-body-lg {
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+.m3-body {
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.m3-body-sm {
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.m3-hero-panel,
+.m3-surface-card {
+  background: var(--md-surface-container);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-lg);
+}
+
+.m3-hero-panel {
+  background: var(--md-surface-container-high);
+}
+
+.m3-section-band {
+  background: color-mix(in srgb, var(--md-surface-container-lowest) 70%, transparent);
+  border-block: 1px solid var(--md-outline-variant);
+}
+
+.m3-step-list,
+.m3-plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.m3-step-list li {
+  display: grid;
+  grid-template-columns: 1.75rem 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.m3-step-index {
+  display: inline-flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.m3-plain-list li {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  padding-left: 0.85rem;
+  border-left: 3px solid var(--md-primary);
+}
+
+.m3-capability-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.m3-capability-item {
+  padding: 1.1rem 1.15rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  border-radius: var(--md-radius-md);
+}
+
+.m3-footer {
+  background: var(--md-surface-container-lowest);
+  border-top: 1px solid var(--md-outline-variant);
+  margin-top: auto;
+}
+
+.m3-footer-heading {
+  margin: 0 0 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+}
+
+.m3-footer-list,
+.m3-footer-team {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.m3-footer-list a {
+  color: var(--md-on-surface);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.m3-footer-list a:hover {
+  color: var(--md-primary);
+}
+
+.m3-footer-team li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.m3-footer-team li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.m3-team-name {
+  color: var(--md-on-surface);
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.m3-team-name:hover {
+  color: var(--md-primary);
+}
+
+.m3-team-role {
+  font-size: 0.8rem;
+  color: var(--md-on-surface-variant);
+}
+
+.m3-team-tg {
+  font-size: 0.8rem;
+  color: var(--md-primary);
+  text-decoration: none;
+}
+
+.m3-footer-bottom {
+  border-top: 1px solid var(--md-outline-variant);
 }

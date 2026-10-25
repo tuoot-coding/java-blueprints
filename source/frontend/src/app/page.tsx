@@ -1,10 +1,5 @@
-import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
-import { WorkspaceShell } from "@/components/layout/WorkspaceShell";
+import { LandingPage } from "@/components/landing/LandingPage";
 
 export default function HomePage() {
-  return (
-    <ErrorBoundary>
-      <WorkspaceShell />
-    </ErrorBoundary>
-  );
+  return <LandingPage />;
 }

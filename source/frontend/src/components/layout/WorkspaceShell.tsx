@@ -501,7 +501,7 @@ export function WorkspaceShell() {
   }
 
   return (
-    <div className="flex h-screen min-h-0 min-w-[1280px] flex-col bg-zinc-950 text-zinc-100">
+    <div className="flex h-screen min-h-0 min-w-[1280px] flex-col overflow-hidden bg-zinc-950 text-zinc-100">
       <HeaderToolbar
         fileName={document.fileName}
         dirty={dirty}
