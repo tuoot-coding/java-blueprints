@@ -35,7 +35,7 @@
 
 Канонический артефакт - текст Java-исходника конкретной ревизии. AST, IR и CFG - производные структуры. Смысловые правки идут через проверенные патчи и повторный разбор, а не через «перестановку картинок» на схеме.
 
-Подробности: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/JAVA_SUPPORT.md`](docs/JAVA_SUPPORT.md), кейс: [`docs/axenix_case.pdf`](docs/axenix_case.pdf).
+Подробности: [`source/docs/ARCHITECTURE.md`](source/docs/ARCHITECTURE.md), [`source/docs/JAVA_SUPPORT.md`](source/docs/JAVA_SUPPORT.md), кейс: [`source/docs/axenix_case.pdf`](source/docs/axenix_case.pdf).
 
 ---
 
@@ -238,15 +238,15 @@ docker compose up --build -d
 
 ```text
 source/
-├── backend/           # FastAPI: parser, IR, graph, analysis, auth, LLM, runner
-├── frontend/          # Next.js IDE: редактор, схема, диагностика, auth UI
-├── contracts/         # openapi.json - зафиксированный контракт API
-├── docs/              # архитектура, milestone, Java support, кейс AXENIX, логотип
-├── fixtures/java/     # эталонные и граничные Java-фикстуры
-├── scripts/           # check.ps1 - единый прогон проверок
-├── compose.yaml       # MySQL + Mailpit + Backend + Frontend
-├── api.example        # шаблон ключа LLM (реальный api не в git)
-└── README.md
+  ├── backend/           # FastAPI: parser, IR, graph, analysis, auth, LLM, runner
+  ├── frontend/          # Next.js IDE: редактор, схема, диагностика, auth UI
+  ├── contracts/         # openapi.json - зафиксированный контракт API
+  ├── docs/              # архитектура, milestone, Java support, кейс AXENIX, логотип
+  ├── fixtures/java/     # эталонные и граничные Java-фикстуры
+  ├── scripts/           # check.ps1 - единый прогон проверок
+  ├── compose.yaml       # MySQL + Mailpit + Backend + Frontend
+  ├── api.example        # шаблон ключа LLM (реальный api не в git)
+  └── README.md
 ```
 
 ---
@@ -256,7 +256,7 @@ source/
 ### Проверки
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\check.ps1
+powershell -ExecutionPolicy Bypass -File source\scripts\check.ps1
 ```
 
 Или вручную:
@@ -296,6 +296,6 @@ npm test
 
 - Лицензия: [MIT](LICENSE)
 - Демо: [http://176.124.223.68:8080/](http://176.124.223.68:8080/)
-- Архитектура: [source/docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- Поддержка Java: [source/docs/JAVA_SUPPORT.md](docs/JAVA_SUPPORT.md)
-- Кейс AXENIX: [source/docs/axenix_case.pdf](docs/axenix_case.pdf)
+- Архитектура: [source/docs/ARCHITECTURE.md](source/docs/ARCHITECTURE.md)
+- Поддержка Java: [source/docs/JAVA_SUPPORT.md](source/docs/JAVA_SUPPORT.md)
+- Кейс AXENIX: [source/docs/axenix_case.pdf](source/docs/axenix_case.pdf)
