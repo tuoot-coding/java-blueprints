@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/git_logo.png" alt="Java Blueprints" width="420" />
+  <img src="source/docs/git_logo.png" alt="Java Blueprints" width="420" />
 </p>
 
 <p align="center">
@@ -108,7 +108,7 @@ flowchart TB
 2. Граф / модульная схема выбранного метода или логики  
 3. Инспектор блока - свойства и привязка к фрагменту исходника  
 
-**Основные группы API** (контракт: [`contracts/openapi.json`](contracts/openapi.json)):
+**Основные группы API** (контракт: [`source/contracts/openapi.json`](source/contracts/openapi.json)):
 
 | Группа | Примеры путей |
 | --- | --- |
@@ -146,8 +146,8 @@ flowchart TB
 - JDK на хосте **не нужен**: компиляция и запуск пользовательского Java только в эфемерных контейнерах
 - Один раз заранее: `docker pull eclipse-temurin:21-jdk`
 
-Обязательный Java-scope кейса и расширенный уровень: [`docs/JAVA_SUPPORT.md`](docs/JAVA_SUPPORT.md).  
-Фикстуры: `fixtures/java/tz_java_lang_io_collections.java`, `fixtures/java/tz_advanced_java.java`.
+Обязательный Java-scope кейса и расширенный уровень: [`source/docs/JAVA_SUPPORT.md`](source/docs/JAVA_SUPPORT.md).  
+Фикстуры: `source/fixtures/java/tz_java_lang_io_collections.java`, `source/fixtures/java/tz_advanced_java.java`.
 
 ---
 
@@ -230,14 +230,14 @@ docker compose up --build -d
 7. Панели растягиваются мышью; схема - на весь экран; доступна генерация/сохранение схемы → код.
 8. **Войти** в шапке - регистрация, кабинет, смена пароля (запросы с `credentials: include` и `X-CSRF-Token`).
 9. Лимит исходника: `.java`, до 4 МиБ (`MAX_JAVA_SOURCE_BYTES`).
-10. Лог Backend: `backend/var/logs/java_blueprints.log` (в Docker: `/data/logs`).
+10. Лог Backend: `source/backend/var/logs/java_blueprints.log` (в Docker: `/data/logs`).
 
 ---
 
 ## Структура репозитория
 
 ```text
-.
+source/
 ├── backend/           # FastAPI: parser, IR, graph, analysis, auth, LLM, runner
 ├── frontend/          # Next.js IDE: редактор, схема, диагностика, auth UI
 ├── contracts/         # openapi.json - зафиксированный контракт API
@@ -296,6 +296,6 @@ npm test
 
 - Лицензия: [MIT](LICENSE)
 - Демо: [http://176.124.223.68:8080/](http://176.124.223.68:8080/)
-- Архитектура: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- Поддержка Java: [docs/JAVA_SUPPORT.md](docs/JAVA_SUPPORT.md)
-- Кейс AXENIX: [docs/axenix_case.pdf](docs/axenix_case.pdf)
+- Архитектура: [source/docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- Поддержка Java: [source/docs/JAVA_SUPPORT.md](docs/JAVA_SUPPORT.md)
+- Кейс AXENIX: [source/docs/axenix_case.pdf](docs/axenix_case.pdf)
