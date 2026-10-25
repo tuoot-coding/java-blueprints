@@ -123,7 +123,7 @@ function ToolbarButton({
       className="inline-flex items-center gap-1.5 rounded border border-zinc-700 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-zinc-950 disabled:text-zinc-600"
     >
       {icon}
-      <span className="hidden sm:inline">{label}</span>
+      <span className="inline">{label}</span>
     </button>
   );
 }

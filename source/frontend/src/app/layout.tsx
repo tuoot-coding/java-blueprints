@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { uiText } from "@/shared/i18n/ru";
@@ -15,6 +15,12 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+/** Всегда ПК-раскладка: на телефонах/планшетах браузер рисует desktop-ширину. */
+export const viewport: Viewport = {
+  width: 1280,
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: uiText.appName,

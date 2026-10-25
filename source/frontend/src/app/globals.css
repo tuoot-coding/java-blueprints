@@ -250,6 +250,8 @@ html[data-theme="galactic"] {
 html,
 body {
   height: 100%;
+  /* ПК-версия на любом устройстве: не сжимаем IDE под узкий экран. */
+  min-width: 1280px;
 }
 
 body {
@@ -258,7 +260,8 @@ body {
   background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
